@@ -45,7 +45,7 @@ int flag = 0;
 int row = 0;
 int column = 0;
 bool menu = true;
-bool editMode = true;
+bool editMode = false;
 bool running = false;
 
 long debouncingTime = 500;
@@ -301,6 +301,9 @@ void printMenu()
     tft.drawString("Run/Pause", 10, 10);
     tft.setTextColor(tft.color565(56, 178, 92), TFT_WHITE);
     tft.drawString("Edit Mode", 10, 30);
+    if(editMode){
+      tft.fillCircle(85, 37, 5, TFT_WHITE);
+    }
   }
   if (running)
   {
@@ -384,7 +387,7 @@ void IRAM_ATTR readQuadrature(bool A_B)
     {
       if (A_B)
       {
-        if (editMode)
+        if (!editMode)
         {
           menu = !menu;
         }
@@ -394,7 +397,7 @@ void IRAM_ATTR readQuadrature(bool A_B)
     {
       if (A_B)
       {
-        if (editMode)
+        if (!editMode)
         {
           menu = !menu;
         }
