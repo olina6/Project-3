@@ -8,7 +8,7 @@
 #define ENCODER_ONE_SWITCH 27
 #define ENCODER_TWO_A 36
 #define ENCODER_TWO_B 37
-#define ENCODER_TWO_SWITCH 38
+#define ENCODER_TWO_SWITCH 32
 
 void setupScreen();
 void initBlocks();
@@ -18,8 +18,9 @@ void findNeighbour();
 void setBlinker();
 void debugPrintNeighbour();
 void printGridInfo();
-void setInitCellNum();
+void findCellNum();
 void printMenu();
+void blinkSelectedBlock();
 
 void IRAM_ATTR readQuadrature(bool A_B);
 void IRAM_ATTR ISR_SWITCH_ONE();
@@ -39,21 +40,26 @@ TFT_eSPI tft = TFT_eSPI();
 int generation = 0;
 int cellNum = 0;
 
-int int_nu = 0;
-int flag = 0;
+int flag_1_encoder = 0;
+int flag_2_encoder = 0;
 
 int row = 0;
 int column = 0;
 bool menu = true;
 bool editMode = false;
 bool running = false;
+bool blinkFlag = false;
 
-long debouncingTime = 500;
+long debouncingDelay = 500;
 long debouncingFlagSwitchA = 0;
+long runningDelay = 1000;
+long runningDelayFlag = 0;
+long runningDelayLevel = 0;
 
 void setup()
 {
   Serial.begin(921600);
+  Serial.println("");
   Serial.println("Start!");
 
   pinMode(ENCODER_ONE_A, INPUT);
@@ -66,14 +72,14 @@ void setup()
   attachInterrupt(ENCODER_ONE_A, ISR_ENCODER_ONE, CHANGE);
   attachInterrupt(ENCODER_ONE_SWITCH, ISR_SWITCH_ONE, FALLING);
 
-  // attachInterrupt(ENCODER_TWO_A, )
-  // attachInterrupt(ENCODER_TWO_SWITCH, )
+  attachInterrupt(ENCODER_TWO_A, ISR_ENCODER_TWO, CHANGE);
+  attachInterrupt(ENCODER_TWO_SWITCH, ISR_SWITCH_TWO, FALLING);
 
   setupScreen();
   initBlocks();
-  setBlinker();
+  // setBlinker();
   printBlocks();
-  setInitCellNum();
+  findCellNum();
   printMenu();
   delay(1000);
 }
@@ -82,31 +88,22 @@ void loop()
 {
   tft.fillScreen(tft.color565(56, 178, 92)); // 0x38b25c
   printMenu();
-  if (menu)
+
+  if ((running) && (millis() - runningDelay > runningDelayFlag))
   {
-    if (running)
-    {
-      findNeighbour();
-      setBlockStatus();
-      printBlocks();
-      debugPrintNeighbour();
-      generation++;
-      printGridInfo();
-      delay(1000);
-    }
-    else
-    {
-      printBlocks();
-      printGridInfo();
-      delay(1000);
-    }
+    runningDelayFlag = millis();
+    findNeighbour();
+    setBlockStatus();
+    debugPrintNeighbour();
+    generation++;
   }
-  else
+  printBlocks();
+  if (editMode)
   {
-    printBlocks();
-    printGridInfo();
-    delay(1000);
+    blinkSelectedBlock();
   }
+  printGridInfo();
+  delay(1000);
 }
 
 void setupScreen()
@@ -188,56 +185,56 @@ void findNeighbour()
       blocks[i][j].neighbour_num = 0; // clear the number of neighbour
       int neighbourNum = 0;
 
-      if (((i - 1) > 0) && ((j - 1) > 0))
+      if ((i - 1 >= 0) && (j - 1 >= 0))
       {
         if (blocks[i - 1][j - 1].alive)
         {
           neighbourNum++;
         }
       }
-      if ((i - 1) > 0)
+      if (i - 1 >= 0)
       {
         if (blocks[i - 1][j].alive)
         {
           neighbourNum++;
         }
       }
-      if (((i - 1) > 0) && ((j + 1) < 8))
+      if ((i - 1 >= 0) && (j + 1 < 8))
       {
         if (blocks[i - 1][j + 1].alive)
         {
           neighbourNum++;
         }
       }
-      if ((j - 1) > 0)
+      if (j - 1 >= 0)
       {
         if (blocks[i][j - 1].alive)
         {
           neighbourNum++;
         }
       }
-      if ((j + 1) < 8)
+      if (j + 1 < 8)
       {
         if (blocks[i][j + 1].alive)
         {
           neighbourNum++;
         }
       }
-      if (((i + 1) < 8) && ((j - 1) > 0))
+      if ((i + 1 < 8) && (j - 1 >= 0))
       {
         if (blocks[i + 1][j - 1].alive)
         {
           neighbourNum++;
         }
       }
-      if ((i + 1) < 8)
+      if (i + 1 < 8)
       {
         if (blocks[i + 1][j].alive)
         {
           neighbourNum++;
         }
       }
-      if (((i + 1) < 8) && ((j + 1) < 8))
+      if ((i + 1 < 8) && (j + 1 < 8))
       {
         if (blocks[i + 1][j + 1].alive)
         {
@@ -249,6 +246,7 @@ void findNeighbour()
     }
   }
 }
+
 
 void debugPrintNeighbour()
 {
@@ -271,7 +269,7 @@ void printGridInfo()
   tft.setTextColor(TFT_WHITE);
   tft.drawString("Genation:", 138, 100);
   tft.drawString("Cell Number:", 138, 115);
-  tft.setCursor(198, 100);
+  tft.setCursor(196, 100);
   if (generation > 9999)
   {
     tft.print("9999+");
@@ -281,7 +279,7 @@ void printGridInfo()
     tft.print(generation);
   }
 
-  tft.setCursor(218, 115);
+  tft.setCursor(216, 115);
   tft.print(cellNum);
 }
 
@@ -301,7 +299,8 @@ void printMenu()
     tft.drawString("Run/Pause", 10, 10);
     tft.setTextColor(tft.color565(56, 178, 92), TFT_WHITE);
     tft.drawString("Edit Mode", 10, 30);
-    if(editMode){
+    if (editMode)
+    {
       tft.fillCircle(85, 37, 5, TFT_WHITE);
     }
   }
@@ -316,8 +315,25 @@ void printMenu()
   }
 }
 
-void setInitCellNum()
+void blinkSelectedBlock()
 {
+  if (blinkFlag)
+  {
+    tft.fillRect(blocks[row][column].x_pos, blocks[row][column].y_pos, 9, 9, TFT_WHITE);
+  }
+  else
+  {
+    tft.drawRect(blocks[row][column].x_pos, blocks[row][column].y_pos, 9, 9, TFT_WHITE);
+    tft.fillRect(blocks[row][column].x_pos + 1, blocks[row][column].y_pos + 1, 7, 7, tft.color565(56, 178, 92));
+    // drawRect can only draw hollow rectangles, if we try to draw a hollow rectangle above the other solid rectangle that has the same color,
+    // then we need to use a smaller solid rectangle to fill the hollow part with different color
+  }
+  blinkFlag = !blinkFlag;
+}
+
+void findCellNum()
+{
+  cellNum = 0;
   for (int i = 0; i < 8; i++)
   {
     for (int j = 0; j < 8; j++)
@@ -332,10 +348,9 @@ void setInitCellNum()
 
 void IRAM_ATTR ISR_SWITCH_ONE()
 {
-  if (millis() - debouncingTime > debouncingFlagSwitchA)
+  if (millis() - debouncingDelay > debouncingFlagSwitchA)
   {
     debouncingFlagSwitchA = millis();
-    Serial.println("Pressed!");
     if (menu)
     {
       running = !running;
@@ -343,7 +358,17 @@ void IRAM_ATTR ISR_SWITCH_ONE()
     else
     {
       editMode = !editMode;
+      running = false; // pause the game when entering the edit mode
     }
+  }
+}
+
+void IRAM_ATTR ISR_SWITCH_TWO()
+{
+  if (editMode)
+  {
+    blocks[row][column].alive = !blocks[row][column].alive;
+    findCellNum();
   }
 }
 
@@ -351,18 +376,18 @@ void IRAM_ATTR ISR_ENCODER_ONE()
 {
   readQuadrature(true);
 }
+
 void IRAM_ATTR ISR_ENCODER_TWO()
 {
   readQuadrature(false);
 }
+
 void IRAM_ATTR readQuadrature(bool A_B)
 {
   int pin_A;
   int pin_B;
-  // u8g2.setPowerSave(1);
-  // lcdStandbyTime = millis();
-  // menuStandbyTime = millis();
-  if (A_B)
+
+  if (A_B) // to find out which pin to read
   {
     pin_A = ENCODER_ONE_A;
     pin_B = ENCODER_ONE_B;
@@ -372,18 +397,19 @@ void IRAM_ATTR readQuadrature(bool A_B)
     pin_A = ENCODER_TWO_A;
     pin_B = ENCODER_TWO_B;
   }
-  if (int_nu == 0 && digitalRead(pin_A) == LOW)
+
+  if (flag_1_encoder == 0 && digitalRead(pin_A) == LOW)
   {
-    flag = 0;
+    flag_2_encoder = 0;
     if (digitalRead(pin_B))
     {
-      flag = 1;
+      flag_2_encoder = 1;
     }
-    int_nu = 1;
+    flag_1_encoder = 1;
   }
-  if (int_nu && digitalRead(pin_A))
+  if (flag_1_encoder && digitalRead(pin_A))
   {
-    if (digitalRead(pin_B) == LOW && flag == 1)
+    if (digitalRead(pin_B) == LOW && flag_2_encoder == 1)
     {
       if (A_B)
       {
@@ -391,9 +417,34 @@ void IRAM_ATTR readQuadrature(bool A_B)
         {
           menu = !menu;
         }
+        else
+        {
+          if (row == 8)
+          {
+            row = 8;
+          }
+          else
+          {
+            row++;
+          }
+        }
+      }
+      else
+      {
+        if (editMode)
+        {
+          if (column == 8)
+          {
+            column = 8;
+          }
+          else
+          {
+            column++;
+          }
+        }
       }
     }
-    if (digitalRead(pin_B) && flag == 0)
+    if (digitalRead(pin_B) && flag_2_encoder == 0)
     {
       if (A_B)
       {
@@ -401,9 +452,35 @@ void IRAM_ATTR readQuadrature(bool A_B)
         {
           menu = !menu;
         }
+        else
+        {
+          if (editMode)
+          {
+            if (row == 0)
+            {
+              row = 0;
+            }
+            else
+            {
+              row--;
+            }
+          }
+        }
+      }
+      else
+      {
+        Serial.println(column);
+        if (column == 0)
+        {
+          column = 0;
+        }
+        else
+        {
+          column--;
+        }
       }
     }
-    int_nu = 0;
+    flag_1_encoder = 0;
   }
 }
 
