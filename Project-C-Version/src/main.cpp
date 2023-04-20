@@ -21,10 +21,11 @@ void printGridInfo();
 void setInitCellNum();
 void printMenu();
 
+void IRAM_ATTR readQuadrature(bool A_B);
 void IRAM_ATTR ISR_SWITCH_ONE();
 void IRAM_ATTR ISR_SWITCH_TWO();
 void IRAM_ATTR ISR_ENCODER_ONE();
-void IRAM_ATTR ISR_SWITCH_TWO();
+void IRAM_ATTR ISR_ENCODER_TWO();
 struct squareBlock
 {
   int x_pos = 0;
@@ -39,6 +40,8 @@ int generation = 0;
 int cellNum = 0;
 
 int int_nu = 0;
+int flag = 0;
+
 int row = 0;
 int column = 0;
 bool menu = true;
@@ -60,8 +63,9 @@ void setup()
   pinMode(ENCODER_TWO_B, INPUT);
   pinMode(ENCODER_TWO_SWITCH, INPUT_PULLUP);
 
+  attachInterrupt(ENCODER_ONE_A, ISR_ENCODER_ONE, CHANGE);
   attachInterrupt(ENCODER_ONE_SWITCH, ISR_SWITCH_ONE, FALLING);
-  // attachInterrupt(ENCODER_ONE_SWITCH, )
+
   // attachInterrupt(ENCODER_TWO_A, )
   // attachInterrupt(ENCODER_TWO_SWITCH, )
 
@@ -289,14 +293,14 @@ void printMenu()
     tft.setTextColor(tft.color565(56, 178, 92), TFT_WHITE);
     tft.drawString("Run/Pause", 10, 10);
     tft.setTextColor(TFT_WHITE, tft.color565(56, 178, 92));
-    tft.drawString("Edit Mode", 10, 40);
+    tft.drawString("Edit Mode", 10, 30);
   }
   else
   {
     tft.setTextColor(TFT_WHITE, tft.color565(56, 178, 92));
     tft.drawString("Run/Pause", 10, 10);
     tft.setTextColor(tft.color565(56, 178, 92), TFT_WHITE);
-    tft.drawString("Edit Mode", 10, 40);
+    tft.drawString("Edit Mode", 10, 30);
   }
   if (running)
   {
@@ -340,43 +344,65 @@ void IRAM_ATTR ISR_SWITCH_ONE()
   }
 }
 
-// void readQuadrature()
-// {
-//     //u8g2.setPowerSave(1);
-//     //lcdStandbyTime = millis();
-//     //menuStandbyTime = millis();
-//     if (int_nu == 0 && digitalRead(A) == LOW)
-//     {
-
-//         flag = 0;
-//         if (digitalRead(B))
-//         {
-//             flag = 1;
-//         }
-//         int_nu = 1;
-//     }
-//     if (int_nu && digitalRead(A))
-//     {
-//         if (digitalRead(B) == LOW && flag == 1)
-//         {
-
-//         }
-
-//         if (digitalRead(B) && flag == 0)
-//         {
-//             if (currentItem == 0)
-//             {
-//                 currentItem = 0;
-//             }
-//             else
-//             {
-//                 currentItem--;
-//             }
-//         }
-
-//         int_nu = 0;
-//     }
-// }
+void IRAM_ATTR ISR_ENCODER_ONE()
+{
+  readQuadrature(true);
+}
+void IRAM_ATTR ISR_ENCODER_TWO()
+{
+  readQuadrature(false);
+}
+void IRAM_ATTR readQuadrature(bool A_B)
+{
+  int pin_A;
+  int pin_B;
+  // u8g2.setPowerSave(1);
+  // lcdStandbyTime = millis();
+  // menuStandbyTime = millis();
+  if (A_B)
+  {
+    pin_A = ENCODER_ONE_A;
+    pin_B = ENCODER_ONE_B;
+  }
+  else
+  {
+    pin_A = ENCODER_TWO_A;
+    pin_B = ENCODER_TWO_B;
+  }
+  if (int_nu == 0 && digitalRead(pin_A) == LOW)
+  {
+    flag = 0;
+    if (digitalRead(pin_B))
+    {
+      flag = 1;
+    }
+    int_nu = 1;
+  }
+  if (int_nu && digitalRead(pin_A))
+  {
+    if (digitalRead(pin_B) == LOW && flag == 1)
+    {
+      if (A_B)
+      {
+        if (editMode)
+        {
+          menu = !menu;
+        }
+      }
+    }
+    if (digitalRead(pin_B) && flag == 0)
+    {
+      if (A_B)
+      {
+        if (editMode)
+        {
+          menu = !menu;
+        }
+      }
+    }
+    int_nu = 0;
+  }
+}
 
 void setBlinker()
 {
