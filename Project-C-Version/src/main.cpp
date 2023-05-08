@@ -18,7 +18,7 @@ void findNeighbour();
 void setBlinker();
 void debugPrintNeighbour();
 void printGridInfo();
-void findBlockNum();
+void findBlockAliveNum();
 void printMenu();
 void blinkSelectedBlock();
 
@@ -38,7 +38,7 @@ squareBlock blocks[8][8];
 TFT_eSPI tft = TFT_eSPI();
 
 int generation = 0;
-int cellNum = 0;
+int aliveNum = 0;
 
 int flag_1_encoder = 0;
 int flag_2_encoder = 0;
@@ -82,7 +82,7 @@ void setup()
   initBlocks();
   // setBlinker();
   printBlocks();
-  findBlockNum();
+  findBlockAliveNum();
   printMenu();
   delay(1000);
 }
@@ -159,12 +159,12 @@ void setBlockStatus()
         if (blocks[i][j].neighbour_num < 2)
         {
           blocks[i][j].alive = false;
-          cellNum--;
+          aliveNum--;
         }
         else if (blocks[i][j].neighbour_num > 3)
         {
           blocks[i][j].alive = false;
-          cellNum--;
+          aliveNum--;
         }
       }
       else if (!blocks[i][j].alive)
@@ -172,7 +172,7 @@ void setBlockStatus()
         if (blocks[i][j].neighbour_num == 3)
         {
           blocks[i][j].alive = true;
-          cellNum++;
+          aliveNum++;
         }
       }
     }
@@ -283,7 +283,7 @@ void printGridInfo()
   }
 
   tft.setCursor(216, 115);
-  tft.print(cellNum);
+  tft.print(aliveNum);
 }
 
 void printMenu()
@@ -334,16 +334,16 @@ void blinkSelectedBlock()
   blinkFlag = !blinkFlag;
 }
 
-void findBlockNum()
+void findBlockAliveNum()
 {
-  cellNum = 0;
+  aliveNum = 0;
   for (int i = 0; i < 8; i++)
   {
     for (int j = 0; j < 8; j++)
     {
       if (blocks[i][j].alive)
       {
-        cellNum++;
+        aliveNum++;
       }
     }
   }
@@ -373,7 +373,7 @@ void IRAM_ATTR ISR_SWITCH_TWO()
   if (editMode)
   {
     blocks[row][column].alive = !blocks[row][column].alive;
-    findBlockNum();
+    findBlockAliveNum();
   }
   }
 }
