@@ -18,7 +18,7 @@ void findNeighbour();
 void setBlinker();
 void debugPrintNeighbour();
 void printGridInfo();
-void findCellNum();
+void findBlockNum();
 void printMenu();
 void blinkSelectedBlock();
 
@@ -57,6 +57,8 @@ long runningDelay = 1000;
 long runningDelayFlag = 0;
 long runningDelayLevel = 0;
 
+
+
 void setup()
 {
   Serial.begin(921600);
@@ -80,7 +82,7 @@ void setup()
   initBlocks();
   // setBlinker();
   printBlocks();
-  findCellNum();
+  findBlockNum();
   printMenu();
   delay(1000);
 }
@@ -332,7 +334,7 @@ void blinkSelectedBlock()
   blinkFlag = !blinkFlag;
 }
 
-void findCellNum()
+void findBlockNum()
 {
   cellNum = 0;
   for (int i = 0; i < 8; i++)
@@ -371,7 +373,7 @@ void IRAM_ATTR ISR_SWITCH_TWO()
   if (editMode)
   {
     blocks[row][column].alive = !blocks[row][column].alive;
-    findCellNum();
+    findBlockNum();
   }
   }
 }
