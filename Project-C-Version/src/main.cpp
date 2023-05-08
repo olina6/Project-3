@@ -51,7 +51,8 @@ bool running = false;
 bool blinkFlag = false;
 
 long debouncingDelay = 500;
-long debouncingFlagSwitchA = 0;
+volatile long debouncingFlagSwitchA = 0;
+volatile long debouncingFlagSwitchB = 0;
 long runningDelay = 1000;
 long runningDelayFlag = 0;
 long runningDelayLevel = 0;
@@ -365,10 +366,13 @@ void IRAM_ATTR ISR_SWITCH_ONE()
 
 void IRAM_ATTR ISR_SWITCH_TWO()
 {
+  if (millis() - debouncingDelay > debouncingFlagSwitchB)
+  {
   if (editMode)
   {
     blocks[row][column].alive = !blocks[row][column].alive;
     findCellNum();
+  }
   }
 }
 
