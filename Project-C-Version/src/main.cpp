@@ -22,6 +22,7 @@ void findBlockAliveNum();
 void printMenu();
 void blinkSelectedBlock();
 void setRunningSpeed();
+void cleanGrid();
 
 void IRAM_ATTR readQuadrature(bool oneOrTwo);
 void IRAM_ATTR ISR_SWITCH_ONE();
@@ -56,8 +57,7 @@ volatile long debouncingFlagSwitchOne = 0;
 volatile long debouncingFlagSwitchTwo = 0;
 long runningDelay = 1000;
 long runningDelayFlag = 0;
-long runningDelayLevel = 0;
-
+volatile long runningDelayLevel = 0;
 
 void setup()
 {
@@ -98,7 +98,7 @@ void loop()
     findNeighbour();
     setBlockStatus();
     findBlockAliveNum();
-    //debugPrintNeighbour();
+    // debugPrintNeighbour();
     generation++;
   }
   printBlocks();
@@ -372,6 +372,44 @@ void findBlockAliveNum()
   }
 }
 
+void setRunningSpeed()
+{
+  switch (runningDelayLevel)
+  {
+  case -2:
+    runningDelay = 4000;
+    break;
+  case -1:
+    runningDelay = 2000;
+    break;
+  case 0:
+    runningDelay = 1000;
+    break;
+  case 1:
+    runningDelay = 800;
+    break;
+  case 2:
+    runningDelay = 500;
+    break;
+  case 3:
+    runningDelay = 250;
+    break;
+  }
+}
+
+void cleanGrid()
+{
+  for (int i = 0; i < 8; i++)
+  {
+    for (int j = 0; j < 8; j++)
+    {
+      blocks[i][j].x_pos, blocks[i][j].alive = false;
+      generation = 0;
+      aliveNum = 0;
+    }
+  }
+}
+
 void IRAM_ATTR ISR_SWITCH_ONE()
 {
   if (millis() - debouncingDelay > debouncingFlagSwitchOne)
@@ -398,6 +436,9 @@ void IRAM_ATTR ISR_SWITCH_TWO()
     {
       blocks[row][column].alive = !blocks[row][column].alive;
       findBlockAliveNum();
+    }else{
+      cleanGrid();
+      running = false;
     }
   }
 }
@@ -444,7 +485,7 @@ void IRAM_ATTR readQuadrature(bool oneOrTwo)
       {
         if (editMode)
         {
-          
+
           if (row == 8)
           {
             row = 8;
@@ -532,31 +573,6 @@ void IRAM_ATTR readQuadrature(bool oneOrTwo)
       }
     }
     flag_1_encoder = 0;
-  }
-}
-
-void setRunningSpeed()
-{
-  switch (runningDelayLevel)
-  {
-  case -2:
-    runningDelay = 4000;
-    break;
-  case -1:
-    runningDelay = 2000;
-    break;
-  case 0:
-    runningDelay = 1000;
-    break;
-  case 1:
-    runningDelay = 800;
-    break;
-  case 2:
-    runningDelay = 500;
-    break;
-  case 3:
-    runningDelay = 250;
-    break;
   }
 }
 
