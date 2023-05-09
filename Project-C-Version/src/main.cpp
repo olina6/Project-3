@@ -58,7 +58,6 @@ volatile long debouncingFlagSwitchTwo = 0;
 long runningDelay = 1000;
 long runningDelayFlag = 0;
 volatile long runningDelayLevel = 0;
-volatile bool ifNeedsRefresh = false;
 
 void setup()
 {
@@ -108,7 +107,6 @@ void loop()
     blinkSelectedBlock();
   }
   printGridInfo();
-
   delay(100);
 }
 
