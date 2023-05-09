@@ -51,8 +51,8 @@ bool running = false;
 bool blinkFlag = false;
 
 long debouncingDelay = 500;
-volatile long debouncingFlagSwitchA = 0;
-volatile long debouncingFlagSwitchB = 0;
+volatile long debouncingFlagSwitchOne = 0;
+volatile long debouncingFlagSwitchTwo = 0;
 long runningDelay = 1000;
 long runningDelayFlag = 0;
 long runningDelayLevel = 0;
@@ -97,6 +97,7 @@ void loop()
     runningDelayFlag = millis();
     findNeighbour();
     setBlockStatus();
+    findBlockAliveNum();
     debugPrintNeighbour();
     generation++;
   }
@@ -106,7 +107,7 @@ void loop()
     blinkSelectedBlock();
   }
   printGridInfo();
-  delay(1000);
+  delay(100);
 }
 
 void setupScreen()
@@ -159,12 +160,10 @@ void setBlockStatus()
         if (blocks[i][j].neighbour_num < 2)
         {
           blocks[i][j].alive = false;
-          aliveNum--;
         }
         else if (blocks[i][j].neighbour_num > 3)
         {
           blocks[i][j].alive = false;
-          aliveNum--;
         }
       }
       else if (!blocks[i][j].alive)
@@ -172,7 +171,6 @@ void setBlockStatus()
         if (blocks[i][j].neighbour_num == 3)
         {
           blocks[i][j].alive = true;
-          aliveNum++;
         }
       }
     }
@@ -351,9 +349,9 @@ void findBlockAliveNum()
 
 void IRAM_ATTR ISR_SWITCH_ONE()
 {
-  if (millis() - debouncingDelay > debouncingFlagSwitchA)
+  if (millis() - debouncingDelay > debouncingFlagSwitchOne)
   {
-    debouncingFlagSwitchA = millis();
+    debouncingFlagSwitchOne = millis();
     if (menu)
     {
       running = !running;
@@ -368,8 +366,9 @@ void IRAM_ATTR ISR_SWITCH_ONE()
 
 void IRAM_ATTR ISR_SWITCH_TWO()
 {
-  if (millis() - debouncingDelay > debouncingFlagSwitchB)
+  if (millis() - debouncingDelay > debouncingFlagSwitchTwo)
   {
+    debouncingFlagSwitchTwo = millis();
   if (editMode)
   {
     blocks[row][column].alive = !blocks[row][column].alive;
