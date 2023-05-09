@@ -47,9 +47,9 @@ volatile int flag_2_encoder = 0;
 
 volatile int row = 0;
 volatile int column = 0;
-volatile bool menu = true;
-volatile bool editMode = false;
-volatile bool running = false;
+volatile bool menuSelection = true;
+volatile bool ifEditing = false;
+volatile bool ifRunning = false;
 bool blinkFlag = false;
 
 const long debouncingDelay = 500;
@@ -58,6 +58,7 @@ volatile long debouncingFlagSwitchTwo = 0;
 long runningDelay = 1000;
 long runningDelayFlag = 0;
 volatile long runningDelayLevel = 0;
+volatile bool ifNeedsRefresh = false;
 
 void setup()
 {
@@ -92,7 +93,7 @@ void loop()
   tft.fillScreen(tft.color565(56, 178, 92)); // 0x38b25c
   printMenu();
   setRunningSpeed();
-  if ((running) && (millis() - runningDelay > runningDelayFlag))
+  if ((ifRunning) && (millis() - runningDelay > runningDelayFlag))
   {
     runningDelayFlag = millis();
     findNeighbour();
@@ -102,11 +103,12 @@ void loop()
     generation++;
   }
   printBlocks();
-  if (editMode)
+  if (ifEditing)
   {
     blinkSelectedBlock();
   }
   printGridInfo();
+
   delay(100);
 }
 
@@ -312,7 +314,7 @@ void printGridInfo()
 void printMenu()
 {
   tft.setTextFont(2);
-  if (menu)
+  if (menuSelection)
   {
     tft.setTextColor(tft.color565(56, 178, 92), TFT_WHITE);
     tft.drawString("Run/Pause", 10, 10);
@@ -325,12 +327,12 @@ void printMenu()
     tft.drawString("Run/Pause", 10, 10);
     tft.setTextColor(tft.color565(56, 178, 92), TFT_WHITE);
     tft.drawString("Edit Mode", 10, 30);
-    if (editMode)
+    if (ifEditing)
     {
       tft.fillCircle(85, 37, 5, TFT_WHITE);
     }
   }
-  if (running)
+  if (ifRunning)
   {
     tft.fillRect(80, 10, 5, 15, TFT_WHITE); // draw the left vertical bar
     tft.fillRect(90, 10, 5, 15, TFT_WHITE);
@@ -415,14 +417,14 @@ void IRAM_ATTR ISR_SWITCH_ONE()
   if (millis() - debouncingDelay > debouncingFlagSwitchOne)
   {
     debouncingFlagSwitchOne = millis();
-    if (menu)
+    if (menuSelection)
     {
-      running = !running;
+      ifRunning = !ifRunning;
     }
     else
     {
-      editMode = !editMode;
-      running = false; // pause the game when entering the edit mode
+      ifEditing = !ifEditing;
+      ifRunning = false; // pause the game when entering the edit mode
     }
   }
 }
@@ -432,13 +434,13 @@ void IRAM_ATTR ISR_SWITCH_TWO()
   if (millis() - debouncingDelay > debouncingFlagSwitchTwo)
   {
     debouncingFlagSwitchTwo = millis();
-    if (editMode)
+    if (ifEditing)
     {
       blocks[row][column].alive = !blocks[row][column].alive;
       findBlockAliveNum();
     }else{
       cleanGrid();
-      running = false;
+      ifRunning = false;
     }
   }
 }
@@ -483,7 +485,7 @@ void IRAM_ATTR readQuadrature(bool oneOrTwo)
     {
       if (oneOrTwo)
       {
-        if (editMode)
+        if (ifEditing)
         {
 
           if (row == 8)
@@ -497,12 +499,12 @@ void IRAM_ATTR readQuadrature(bool oneOrTwo)
         }
         else
         {
-          menu = !menu;
+          menuSelection = !menuSelection;
         }
       }
       else
       {
-        if (editMode)
+        if (ifEditing)
         {
           if (column == 8)
           {
@@ -530,7 +532,7 @@ void IRAM_ATTR readQuadrature(bool oneOrTwo)
     {
       if (oneOrTwo) // encoder
       {
-        if (editMode)
+        if (ifEditing)
         {
           if (row == 0)
           {
@@ -543,12 +545,12 @@ void IRAM_ATTR readQuadrature(bool oneOrTwo)
         }
         else
         {
-          menu = !menu;
+          menuSelection = !menuSelection;
         }
       }
       else
       {
-        if (editMode)
+        if (ifEditing)
         {
           if (column == 0)
           {
