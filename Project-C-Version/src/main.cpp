@@ -21,8 +21,9 @@ void printGridInfo();
 void findBlockAliveNum();
 void printMenu();
 void blinkSelectedBlock();
+void setRunningSpeed();
 
-void IRAM_ATTR readQuadrature(bool A_B);
+void IRAM_ATTR readQuadrature(bool oneOrTwo);
 void IRAM_ATTR ISR_SWITCH_ONE();
 void IRAM_ATTR ISR_SWITCH_TWO();
 void IRAM_ATTR ISR_ENCODER_ONE();
@@ -40,23 +41,22 @@ TFT_eSPI tft = TFT_eSPI();
 int generation = 0;
 int aliveNum = 0;
 
-int flag_1_encoder = 0;
-int flag_2_encoder = 0;
+volatile int flag_1_encoder = 0;
+volatile int flag_2_encoder = 0;
 
-int row = 0;
-int column = 0;
-bool menu = true;
-bool editMode = false;
-bool running = false;
+volatile int row = 0;
+volatile int column = 0;
+volatile bool menu = true;
+volatile bool editMode = false;
+volatile bool running = false;
 bool blinkFlag = false;
 
-long debouncingDelay = 500;
+const long debouncingDelay = 500;
 volatile long debouncingFlagSwitchOne = 0;
 volatile long debouncingFlagSwitchTwo = 0;
 long runningDelay = 1000;
 long runningDelayFlag = 0;
 long runningDelayLevel = 0;
-
 
 
 void setup()
@@ -91,14 +91,14 @@ void loop()
 {
   tft.fillScreen(tft.color565(56, 178, 92)); // 0x38b25c
   printMenu();
-
+  setRunningSpeed();
   if ((running) && (millis() - runningDelay > runningDelayFlag))
   {
     runningDelayFlag = millis();
     findNeighbour();
     setBlockStatus();
     findBlockAliveNum();
-    debugPrintNeighbour();
+    //debugPrintNeighbour();
     generation++;
   }
   printBlocks();
@@ -248,7 +248,6 @@ void findNeighbour()
   }
 }
 
-
 void debugPrintNeighbour()
 {
   for (int i = 0; i < 8; i++)
@@ -282,6 +281,32 @@ void printGridInfo()
 
   tft.setCursor(216, 115);
   tft.print(aliveNum);
+
+  const char *speed;
+  switch (runningDelayLevel)
+  {
+  case -2:
+    speed = "0.25X";
+    break;
+  case -1:
+    speed = "0.5X";
+    break;
+  case 0:
+    speed = "1.0X";
+    break;
+  case 1:
+    speed = "1.25X";
+    break;
+  case 2:
+    speed = "2.0X";
+    break;
+  case 3:
+    speed = "4.0X";
+    break;
+  }
+
+  tft.setTextFont(4);
+  tft.drawString(speed, 10, 100);
 }
 
 void printMenu()
@@ -369,11 +394,11 @@ void IRAM_ATTR ISR_SWITCH_TWO()
   if (millis() - debouncingDelay > debouncingFlagSwitchTwo)
   {
     debouncingFlagSwitchTwo = millis();
-  if (editMode)
-  {
-    blocks[row][column].alive = !blocks[row][column].alive;
-    findBlockAliveNum();
-  }
+    if (editMode)
+    {
+      blocks[row][column].alive = !blocks[row][column].alive;
+      findBlockAliveNum();
+    }
   }
 }
 
@@ -387,12 +412,11 @@ void IRAM_ATTR ISR_ENCODER_TWO()
   readQuadrature(false);
 }
 
-void IRAM_ATTR readQuadrature(bool A_B)
+void IRAM_ATTR readQuadrature(bool oneOrTwo)
 {
   int pin_A;
   int pin_B;
-
-  if (A_B) // to find out which pin to read
+  if (oneOrTwo) // to find out which pin to read
   {
     pin_A = ENCODER_ONE_A;
     pin_B = ENCODER_ONE_B;
@@ -416,14 +440,11 @@ void IRAM_ATTR readQuadrature(bool A_B)
   {
     if (digitalRead(pin_B) == LOW && flag_2_encoder == 1)
     {
-      if (A_B)
+      if (oneOrTwo)
       {
-        if (!editMode)
+        if (editMode)
         {
-          menu = !menu;
-        }
-        else
-        {
+          
           if (row == 8)
           {
             row = 8;
@@ -432,6 +453,10 @@ void IRAM_ATTR readQuadrature(bool A_B)
           {
             row++;
           }
+        }
+        else
+        {
+          menu = !menu;
         }
       }
       else
@@ -447,45 +472,91 @@ void IRAM_ATTR readQuadrature(bool A_B)
             column++;
           }
         }
+        else
+        {
+          if (runningDelayLevel == 3)
+          {
+            runningDelayLevel = 3;
+          }
+          else
+          {
+            runningDelayLevel++;
+          }
+        }
       }
     }
     if (digitalRead(pin_B) && flag_2_encoder == 0)
     {
-      if (A_B)
+      if (oneOrTwo) // encoder
       {
-        if (!editMode)
+        if (editMode)
         {
-          menu = !menu;
+          if (row == 0)
+          {
+            row = 0;
+          }
+          else
+          {
+            row--;
+          }
         }
         else
         {
-          if (editMode)
-          {
-            if (row == 0)
-            {
-              row = 0;
-            }
-            else
-            {
-              row--;
-            }
-          }
+          menu = !menu;
         }
       }
       else
       {
-        Serial.println(column);
-        if (column == 0)
+        if (editMode)
         {
-          column = 0;
+          if (column == 0)
+          {
+            column = 0;
+          }
+          else
+          {
+            column--;
+          }
         }
         else
         {
-          column--;
+          if (runningDelayLevel == -2)
+          {
+            runningDelayLevel = -2;
+          }
+          else
+          {
+            runningDelayLevel--;
+          }
         }
       }
     }
     flag_1_encoder = 0;
+  }
+}
+
+void setRunningSpeed()
+{
+  switch (runningDelayLevel)
+  {
+  case -2:
+    runningDelay = 4000;
+    break;
+  case -1:
+    runningDelay = 2000;
+    break;
+  case 0:
+    runningDelay = 1000;
+    break;
+  case 1:
+    runningDelay = 800;
+    break;
+  case 2:
+    runningDelay = 500;
+    break;
+  case 3:
+    runningDelay = 250;
+    break;
   }
 }
 
